@@ -5,51 +5,61 @@ import folium
 from streamlit_folium import st_folium
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 import io
 
-# --- KONFIGURASI HALAMAN STREAMLIT ---
+# --- KONFIGURASI HALAMAN ---
 st.set_page_config(
-    page_title="ZF-Core Engine 3D Scanner",
+    page_title="ZF-Core Engine Global",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- DATABASE KUNCI LISENSI PREMIUM ---
+# --- DATABASE TIER LISENSI INTERNASIONAL ---
 VALID_LICENSES = {
-    "ZF-PREMIUM-2026": {"nama": "Pak Baroq (VIP)", "tipe": "VIP Master Access"},
-    "ZF-GUEST-SKANTO": {"nama": "Lahan Skanto User", "tipe": "Limited Access"},
-    "ZF-PRO-PAPUA01": {"nama": "Mitra Lapangan 01", "tipe": "Pro Field License"}
+    "ZF-FREE-DEMO": {
+        "nama": "Pengguna Gratis / Free Trial",
+        "tier": "FREE",
+        "max_area": 100.0,
+        "pdf_export": False,
+        "map_access": False,
+        "harga": "$0 / Free"
+    },
+    "ZF-MITRA-2026": {
+        "nama": "Mitra Lapangan (Field Pro)",
+        "tier": "MITRA",
+        "max_area": 50000.0,
+        "pdf_export": True,
+        "map_access": True,
+        "harga": "$29 / Month"
+    },
+    "ZF-INSTITUTION-VIP": {
+        "nama": "Institutional / Enterprise Access",
+        "tier": "INSTITUTIONAL",
+        "max_area": 99999999.0,
+        "pdf_export": True,
+        "map_access": True,
+        "harga": "$299 / Month"
+    }
 }
 
-# --- CUSTOMLSS STYLING (DARK THEME) ---
+# --- STYLING (DARK ENTERPRISE THEME) ---
 st.markdown("""
     <style>
-    .main {
-        background-color: #050b14;
-        color: #ffffff;
-    }
+    .main { background-color: #050b14; color: #ffffff; }
     .stButton>button {
-        background-color: #00e5ff;
-        color: #000000;
-        font-weight: bold;
-        border-radius: 8px;
-        border: none;
-        width: 100%;
-        height: 48px;
+        background-color: #00e5ff; color: #000000; font-weight: bold;
+        border-radius: 8px; border: none; width: 100%; height: 48px;
     }
-    .stButton>button:hover {
-        background-color: #00b3cc;
-        color: #ffffff;
-    }
+    .stButton>button:hover { background-color: #00b3cc; color: #ffffff; }
     .report-card {
-        background-color: #0b172a;
-        padding: 20px;
-        border-radius: 10px;
-        border: 1px solid #1e293b;
-        margin-bottom: 20px;
+        background-color: #0b172a; padding: 20px; border-radius: 10px;
+        border: 1px solid #1e293b; margin-bottom: 20px;
+    }
+    .tier-badge {
+        background-color: #1e293b; color: #00e5ff; padding: 5px 10px;
+        border-radius: 5px; font-weight: bold; font-size: 12px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -60,26 +70,42 @@ if 'authenticated' not in st.session_state:
     st.session_state['user_info'] = {}
 
 if not st.session_state['authenticated']:
-    st.title("🔒 ZF-Core Engine Premium")
-    st.subheader("Aplikasi Pemindaian Geofisika & Valuasi Emas Aluvial")
+    st.title("🔒 ZF-Core Engine Global SaaS")
+    st.subheader("International Gold Geophysics & Valuation Platform")
     
-    license_key = st.text_input("Masukkan Kunci Lisensi Serial (License Key):", type="password")
-    if st.button("MASUK / VALIDASI LISENSI"):
-        if license_key in VALID_LICENSES:
-            st.session_state['authenticated'] = True
-            st.session_state['user_info'] = VALID_LICENSES[license_key]
-            st.success(f"Lisensi Aktif! Selamat datang, {st.session_state['user_info']['nama']}.")
-            st.rerun()
-        else:
-            st.error("Kunci Lisensi tidak valid atau telah kedaluwarsa.")
+    col_lic, col_info = st.columns([1, 1])
+    
+    with col_lic:
+        license_key = st.text_input("Enter License Serial Key (Kunci Lisensi):", type="password")
+        if st.button("AUTHENTICATE / MASUK"):
+            if license_key in VALID_LICENSES:
+                st.session_state['authenticated'] = True
+                st.session_state['user_info'] = VALID_LICENSES[license_key]
+                st.success(f"Access Granted! Welcome, {st.session_state['user_info']['nama']}.")
+                st.rerun()
+            else:
+                st.error("Invalid or Expired Serial Key.")
+        
+        st.markdown("---")
+        st.write("🔑 **Demo Keys for Testing:**")
+        st.code("ZF-FREE-DEMO       -> Free Trial ($0)\nZF-MITRA-2026      -> Mitra Lapangan ($29/mo)\nZF-INSTITUTION-VIP -> Institutional ($299/mo)")
+
+    with col_info:
+        st.markdown("""
+        ### 🌍 Subscription Plans / Paket Lisensi:
+        * **🆓 Free Trial ($0):** Limited to 100 m² scan area. Basic volumetric reports.
+        * **🚜 Mitra Lapangan ($29 / Mo):** Up to 50,000 m² (5 Ha), Satellite Maps, PDF Reports, OPEX Calculator.
+        * **🏛️ Institutional ($299 / Mo):** Unlimited Scan Area, Full Investor PDF Export, Multi-currency (USD & IDR).
+        """)
     st.stop()
 
 # --- SIDEBAR UTAMA ---
 st.sidebar.title("💎 ZF-Core Engine")
-st.sidebar.write(f"👤 Pengguna: **{st.session_state['user_info']['nama']}**")
-st.sidebar.caption(f"Tipe Akses: {st.session_state['user_info']['tipe']}")
+user = st.session_state['user_info']
+st.sidebar.write(f"👤 **{user['nama']}**")
+st.sidebar.markdown(f"Plan: <span class='tier-badge'>{user['tier']} ({user['harga']})</span>", unsafe_allow_html=True)
 
-if st.sidebar.button("Keluar / Logout"):
+if st.sidebar.button("Logout / Keluar"):
     st.session_state['authenticated'] = False
     st.rerun()
 
@@ -87,26 +113,46 @@ st.sidebar.markdown("---")
 
 # --- FORM INPUT PARAMETER LAHAN ---
 with st.sidebar.form("input_form"):
-    st.subheader("⚙️ Parameter Lahan Target")
-    nama_area = st.text_input("Nama Lokasi Target", value="UPT Arso IX / Intaimilyan")
-    luas_m2 = st.number_input("Luas Area Pengujian (m²)", value=10000.0, step=500.0)
-    coords_input = st.text_input("Koordinat (Lat, Long)", value="-2.789327, 140.654430")
-    harga_per_g = st.number_input("Acuan Harga Emas (Rp/gram)", value=2000000, step=50000)
+    st.subheader("⚙️ Target Land Parameters")
+    nama_area = st.text_input("Location Name", value="UPT Arso IX / Intaimilyan")
     
-    st.subheader("🚜 Simulasi Biaya Operasional (OPEX)")
-    durasi_hari = st.number_input("Estimasi Durasi Kerja (Hari)", value=30, step=5)
-    sewa_alat_per_hari = st.number_input("Sewa Excavator & Alat / Hari (Rp)", value=3500000, step=250000)
-    biaya_solar_per_hari = st.number_input("Biaya BBM Solar / Hari (Rp)", value=1500000, step=100000)
-    gaji_tim_per_hari = st.number_input("Biaya Tenaga Kerja / Hari (Rp)", value=1000000, step=100000)
+    # Restriksi Luas Berdasarkan Tier
+    max_area_allowed = user['max_area']
+    luas_m2 = st.number_input(
+        f"Scan Area (m²) [Max: {max_area_allowed:,.0f} m²]", 
+        value=min(10000.0, max_area_allowed), 
+        step=500.0
+    )
     
-    btn_scan = st.form_submit_button("JALANKAN SCAN 3D & EKSPLORASI")
+    if luas_m2 > max_area_allowed:
+        st.error(f"⚠️ License limit exceeded! Your current plan allows max {max_area_allowed:,.0f} m².")
+    
+    coords_input = st.text_input("Coordinates (Lat, Long)", value="-2.789327, 140.654430")
+    
+    # Currency Rates
+    st.subheader("💵 Financial Acuations (USD & IDR)")
+    usd_to_idr = st.number_input("USD Exchange Rate (Rp / $1)", value=15500, step=100)
+    harga_per_oz_usd = st.number_input("Gold Price ($ / Ounce)", value=2500.0, step=50.0)
+    
+    # Conversi Gram ke USD & IDR
+    harga_per_gram_usd = harga_per_oz_usd / 31.1035
+    harga_per_gram_idr = harga_per_gram_usd * usd_to_idr
+    
+    # OPEX Simulation (Hanya untuk Mitra & Institutional)
+    st.subheader("🚜 OPEX Simulation ($ USD)")
+    durasi_hari = st.number_input("Duration (Days)", value=30, step=5)
+    opex_per_day_usd = st.number_input("Daily Equipment & Fuel Cost ($/Day)", value=350.0, step=50.0)
+    
+    btn_scan = st.form_submit_button("RUN 3D SCAN & VALUATION")
 
 # --- KONTEN UTAMA APLIKASI ---
-st.title("📡 ZF-SCANNER 3D GRID")
-st.caption("π_eff Hardware & Geospatial Connected Engine v3.5 Pro")
+st.title("📡 ZF-SCANNER 3D GRID GLOBAL")
+st.caption("π_eff Geospatial Connected Engine v4.0 International Edition")
 
-# --- PENYIMPANAN LINK APP ---
-st.info("🔗 **Simpan Link App:** Anda dapat menandai (*bookmark*) tautan web **`d7o.streamlit.app`** di browser HP Anda untuk membuka aplikasi ini secara instan di lapangan.")
+# --- VALIDASI BATAS LUAS AREA LISENSI ---
+if luas_m2 > max_area_allowed:
+    st.warning(f"🔒 **LIMITATION NOTICE:** You are attempting to scan {luas_m2:,.0f} m², but your **{user['tier']}** license is limited to **{max_area_allowed:,.0f} m²**. Please upgrade to **Institutional License ($299/mo)** for unlimited access.")
+    st.stop()
 
 # --- PROSES PEMINDAIAN GEOFISIKA ---
 try:
@@ -114,7 +160,7 @@ try:
     lat = float(lat_str.strip())
     lon = float(lon_str.strip())
 except Exception:
-    st.error("Format koordinat salah! Gunakan format: `-2.789327, 140.654430`")
+    st.error("Invalid coordinates format! Use: `-2.789327, 140.654430`")
     st.stop()
 
 # Logika Matematika Core Engine A_ZF
@@ -130,94 +176,93 @@ tonase_tanah = vol_ore_m3 * 2.0
 emas_min_kg = (tonase_tanah * kadar_min) / 1000.0
 emas_max_kg = (tonase_tanah * kadar_max) / 1000.0
 
-rupiah_min = emas_min_kg * 1000 * harga_per_g
-rupiah_max = emas_max_kg * 1000 * harga_per_g
+# Valuasi USD & IDR
+val_min_usd = emas_min_kg * 1000 * harga_per_gram_usd
+val_max_usd = emas_max_kg * 1000 * harga_per_gram_usd
 
-# Kalkulasi OPEX & Net Profit
-total_opex = (sewa_alat_per_hari + biaya_solar_per_hari + gaji_tim_per_hari) * durasi_hari
-net_profit_min = rupiah_min - total_opex
-net_profit_max = rupiah_max - total_opex
+val_min_idr = val_min_usd * usd_to_idr
+val_max_idr = val_max_usd * usd_to_idr
 
-# --- RINGKASAN HASIL UTAMA ---
+total_opex_usd = opex_per_day_usd * durasi_hari
+total_opex_idr = total_opex_usd * usd_to_idr
+
+net_min_usd = val_min_usd - total_opex_usd
+net_max_usd = val_max_usd - total_opex_usd
+
+# --- METRIK UTAMA DENGAN DUA MATA UANG ---
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Skor Akurasi A_ZF", f"{skor_azf}%", "PROSPEK TINGGI")
-col2.metric("Volume Material Ore", f"{vol_ore_m3:,.0f} m³", f"Tebal ~{tebal_paydirt}m")
-col3.metric("Estimasi Emas Murni", f"{emas_min_kg:.2f} - {emas_max_kg:.2f} Kg")
-col4.metric("Estimasi Total OPEX", f"Rp {total_opex:,.0f}", f"{durasi_hari} Hari Kerja")
+col1.metric("A_ZF Accuracy Score", f"{skor_azf}%", "HIGH PROSPECT")
+col2.metric("Ore Material Volume", f"{vol_ore_m3:,.0f} m³", f"Thickness ~{tebal_paydirt}m")
+col3.metric("Est. Pure Gold Yield", f"{emas_min_kg:.2f} - {emas_max_kg:.2f} Kg", f"{(emas_min_kg*32.1507):,.0f} - {(emas_max_kg*32.1507):,.0f} Oz")
+col4.metric("Est. Gross Valuation ($)", f"${val_min_usd/1e6:.2f}M -${val_max_usd/1e6:.2f}M", f"Rp {val_min_idr/1e9:.1f}B - Rp {val_max_idr/1e9:.1f}B")
 
 st.markdown("---")
 
-# --- TAMPILAN PETA INTERAKTIF (FOLIUM) ---
-st.subheader("🗺️ Peta Interaktif Episentrum Target (Satelit)")
-m = folium.Map(location=[lat, lon], zoom_start=16, tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", attr="Google Satelit")
-folium.Marker(
-    [lat, lon],
-    popup=f"Target: {nama_area}\nPotensi: {emas_min_kg:.2f} - {emas_max_kg:.2f} Kg Emas",
-    icon=folium.Icon(color="red", icon="info-sign")
-).add_to(m)
-folium.Circle(
-    radius=np.sqrt(luas_m2 / np.pi),
-    location=[lat, lon],
-    color="gold",
-    fill=True,
-    fill_opacity=0.3
-).add_to(m)
+# --- PETA SATELLITE (KHUSUS MITRA & INSTITUTIONAL) ---
+st.subheader("🗺️ Target Episentrum Interactive Satellite Map")
+if user['map_access']:
+    m = folium.Map(location=[lat, lon], zoom_start=16, tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", attr="Google Satelit")
+    folium.Marker(
+        [lat, lon],
+        popup=f"Target: {nama_area}\nEst: ${val_min_usd/1e6:.2f}M USD",
+        icon=folium.Icon(color="red", icon="info-sign")
+    ).add_to(m)
+    folium.Circle(
+        radius=np.sqrt(luas_m2 / np.pi),
+        location=[lat, lon],
+        color="gold", fill=True, fill_opacity=0.3
+    ).add_to(m)
+    st_folium(m, width=1100, height=380)
+else:
+    st.info("🔒 **Map Feature Locked:** Upgrade to **Mitra Lapangan ($29/mo)** or **Institutional Plan ($299/mo)** to unlock interactive Google Satellite Maps.")
 
-st_folium(m, width=1100, height=400)
-
-# --- LAPORAN ANALISIS GEOLOGI & KEUANGAN ---
+# --- LAPORAN ANALISIS GEOLOGI & KEUANGAN INTERNASIONAL ---
 st.markdown(f"""
 <div class="report-card">
-    <h3>📍 LAPORAN PEMINDAIAN LENGKAP & SIMULASI PROFIT</h3>
-    <p><b>Lokasi Target:</b> {nama_area}<br>
-    <b>Koordinat Episentrum:</b> {lat:.6f}, {lon:.6f}<br>
-    <b>Luas Area Pengujian:</b> {luas_m2:,.0f} m² (<b>{luas_m2/10000:.2f} Hektar</b>)</p>
+    <h3>📍 COMPREHENSIVE RESERVE & VALUATION REPORT</h3>
+    <p><b>Target Location:</b> {nama_area}<br>
+    <b>Coordinates:</b> {lat:.6f}, {lon:.6f}<br>
+    <b>Scan Area Size:</b> {luas_m2:,.0f} m² (<b>{luas_m2/10000:.2f} Hectares</b>)<br>
+    <b>License Tier:</b> <span style="color:#00e5ff;">{user['tier']}</span></p>
     <hr style="border-color: #1e293b;">
-    <h4>📦 Estimasi Cadangan & Valuasi Kotor:</h4>
+    <h4>📦 Reserve Estimation & Gross Valuation:</h4>
     <ul>
-        <li><b>Total Tonase Tanah:</b> ± {tonase_tanah:,.1f} Ton</li>
-        <li><b>Potensi Kadar (Grade):</b> {kadar_min} – {kadar_max} gram/ton</li>
-        <li><b>Valuasi Kotor Minimal:</b> <span style="color: #00ff88;">Rp {rupiah_min:,.0f}</span></li>
-        <li><b>Valuasi Kotor Maksimal:</b> <span style="color: #00ff88;">Rp {rupiah_min:,.0f}</span></li>
+        <li><b>Total Earth Tonnage:</b> ± {tonase_tanah:,.1f} Metric Tons</li>
+        <li><b>Potential Grade:</b> {kadar_min} – {kadar_max} grams / Ton</li>
+        <li><b>Gross Valuation (USD):</b> <span style="color: #00ff88;">${val_min_usd:,.2f} USD</span> – <span style="color: #00ff88;">${val_max_usd:,.2f} USD</span></li>
+        <li><b>Gross Valuation (IDR):</b> Rp {val_min_idr:,.0f} – Rp {val_max_idr:,.0f}</li>
     </ul>
     <hr style="border-color: #1e293b;">
-    <h4>💸 Analisis Biaya Operasional & Keuntungan Bersih (Net Profit):</h4>
+    <h4>💸 Operational Cost (OPEX) & Net Profit Projection:</h4>
     <ul>
-        <li><b>Estimasi Total Biaya (OPEX):</b> Rp {total_opex:,.0f} ({durasi_hari} Hari)</li>
-        <li><b>Potensi Keuntungan Bersih (Min):</b> <span style="color: #00e5ff;">Rp {net_profit_min:,.0f}</span></li>
-        <li><b>Potensi Keuntungan Bersih (Max):</b> <span style="color: #00e5ff;">Rp {net_profit_max:,.0f}</span></li>
+        <li><b>Total OPEX ({durasi_hari} Days):</b> ${total_opex_usd:,.2f} USD (Rp {total_opex_idr:,.0f})</li>
+        <li><b>Net Profit Range (USD):</b> <span style="color: #00e5ff;">${net_min_usd:,.2f} USD</span> – <span style="color: #00e5ff;">${net_max_usd:,.2f} USD</span></li>
     </ul>
-    <hr style="border-color: #1e293b;">
-    <h4>📝 Deskripsi Geologi & Rekomendasi Lapangan:</h4>
-    <p>• Area ini berada di zona perangkap aluvial purba (<i>paleochannel</i>).<br>
-    • Lapisan lempung kebiruan keras (<i>bedrock</i>) bertindak sebagai penahan konsentrasi emas murni di atasnya.<br>
-    💡 <b>Rekomendasi:</b> Ambil sampel tanah lempung/pasir bercampur kerikil tepat di atas permukaan batu kebiruan di kedalaman 8–10m untuk pengujian pendulangan.</p>
 </div>
 """, unsafe_allow_html=True)
 
 # --- VISUALISASI LAYAR 3D DENSITY ---
-st.subheader("🧊 Profil Struktural Layer Kedalaman")
-
+st.subheader("🧊 Subsurface Structural Layer Density Profile")
 start_gold = 10
 end_gold = start_gold + int(tebal_paydirt) - 1
 
 layers_data = []
 for z in range(1, 21):
     if 1 <= z <= 3:
-        layers_data.append({"Kedalaman": f"{z}m", "Densitas (ρ)": 2.51, "Material": "BATUAN / TOPSOIL"})
+        layers_data.append({"Depth": f"{z}m", "Density (ρ)": 2.51, "Formation Layer": "BATUAN / TOPSOIL"})
     elif 4 <= z <= 7:
-        layers_data.append({"Kedalaman": f"{z}m", "Densitas (ρ)": 0.99, "Material": "AIR TANAH / AQUA"})
+        layers_data.append({"Depth": f"{z}m", "Density (ρ)": 0.99, "Formation Layer": "AIR TANAH / AQUIFER"})
     elif 8 <= z <= 9:
-        layers_data.append({"Kedalaman": f"{z}m", "Densitas (ρ)": 2.80, "Material": "BEDROCK LEMPUNG"})
+        layers_data.append({"Depth": f"{z}m", "Density (ρ)": 2.80, "Formation Layer": "BEDROCK BLUE CLAY"})
     elif start_gold <= z <= end_gold:
-        layers_data.append({"Kedalaman": f"{z}m", "Densitas (ρ)": 19.32, "Material": "EMAS PEKAT (PAYDIRT)"})
+        layers_data.append({"Depth": f"{z}m", "Density (ρ)": 19.32, "Formation Layer": "RICH GOLD ORE (PAYDIRT)"})
     else:
-        layers_data.append({"Kedalaman": f"{z}m", "Densitas (ρ)": 2.78, "Material": "BATUAN DASAR"})
+        layers_data.append({"Depth": f"{z}m", "Density (ρ)": 2.78, "Formation Layer": "BASEMENT BEDROCK"})
 
 df_layers = pd.DataFrame(layers_data)
 st.dataframe(df_layers, use_container_width=True)
 
-# --- FUNGSI GENERATOR LAPORAN PDF ---
+# --- FUNGSI GENERATOR LAPORAN PDF (KHUSUS UNTUK MITRA & INSTITUTIONAL) ---
 def generate_pdf():
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -225,19 +270,19 @@ def generate_pdf():
     story = []
 
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#00b3cc'), alignment=1)
-    story.append(Paragraph("LAPORAN RESMI PEMINDAIAN ZF-CORE ENGINE", title_style))
+    story.append(Paragraph("OFFICIAL ZF-CORE ENGINE RESERVE REPORT", title_style))
     story.append(Spacer(1, 15))
 
     data_summary = [
-        ["Lokasi Target", nama_area],
-        ["Koordinat Episentrum", f"{lat:.6f}, {lon:.6f}"],
-        ["Luas Area Pengujian", f"{luas_m2:,.0f} m² ({luas_m2/10000:.2f} Ha)"],
-        ["Skor Akurasi A_ZF", f"{skor_azf}% (PROSPEK TINGGI)"],
-        ["Volume Ore / Paydirt", f"{vol_ore_m3:,.1f} m³ (Tebal ~{tebal_paydirt}m)"],
-        ["Estimasi Emas Murni", f"{emas_min_kg:.2f} Kg - {emas_max_kg:.2f} Kg"],
-        ["Valuasi Kotor", f"Rp {rupiah_min:,.0f} - Rp {rupiah_max:,.0f}"],
-        ["Estimasi Total OPEX", f"Rp {total_opex:,.0f} ({durasi_hari} Hari)"],
-        ["Keuntungan Bersih (Net)", f"Rp {net_profit_min:,.0f} - Rp {net_profit_max:,.0f}"]
+        ["Target Location", nama_area],
+        ["Coordinates", f"{lat:.6f}, {lon:.6f}"],
+        ["Scan Area Size", f"{luas_m2:,.0f} m² ({luas_m2/10000:.2f} Ha)"],
+        ["A_ZF Score", f"{skor_azf}% (HIGH PROSPECT)"],
+        ["Ore Material Volume", f"{vol_ore_m3:,.1f} m³ (Thickness ~{tebal_paydirt}m)"],
+        ["Est. Pure Gold Yield", f"{emas_min_kg:.2f} Kg - {emas_max_kg:.2f} Kg"],
+        ["Gross Valuation ($ USD)", f"${val_min_usd:,.2f} -${val_max_usd:,.2f}"],
+        ["Total OPEX Est. ($ USD)", f"${total_opex_usd:,.2f} ({durasi_hari} Days)"],
+        ["Net Profit Est. ($ USD)", f"${net_min_usd:,.2f} -${net_max_usd:,.2f}"]
     ]
 
     t = Table(data_summary, colWidths=[180, 300])
@@ -251,18 +296,21 @@ def generate_pdf():
     story.append(t)
     story.append(Spacer(1, 15))
 
-    story.append(Paragraph("Deskripsi Geologi & Rekomendasi:", styles['Heading2']))
-    story.append(Paragraph("• Area ini berada di zona perangkap aluvial purba (paleochannel). Lapisan lempung kebiruan keras (bedrock) bertindak sebagai penahan konsentrasi emas murni di atasnya.", styles['BodyText']))
-    story.append(Paragraph("• Rekomendasi: Ambil sampel tanah lempung/pasir bercampur kerikil tepat di atas permukaan batu kebiruan untuk pengujian pendulangan.", styles['BodyText']))
+    story.append(Paragraph("Geological Description & Field Recommendations:", styles['Heading2']))
+    story.append(Paragraph("• The targeted zone sits on an ancient alluvial trap (paleochannel). A dense blue clay bedrock layer acts as a natural seal concentrating gold particles.", styles['BodyText']))
+    story.append(Paragraph("• Recommendation: Collect soil samples above the blue clay formation at 8m-10m depth for panning verification.", styles['BodyText']))
 
     doc.build(story)
     buffer.seek(0)
     return buffer
 
 # --- TOMBOL UNDUH PDF ---
-st.download_button(
-    label="📄 UNDUH LAPORAN RESMI BERFORMAT PDF",
-    data=generate_pdf(),
-    file_name=f"Laporan_ZF_{nama_area.replace(' ', '_')}.pdf",
-    mime="application/pdf"
-)
+if user['pdf_export']:
+    st.download_button(
+        label="📄 DOWNLOAD OFFICIAL INVESTOR PDF REPORT ($ USD)",
+        data=generate_pdf(),
+        file_name=f"ZF_Report_{nama_area.replace(' ', '_')}.pdf",
+        mime="application/pdf"
+    )
+else:
+    st.info("🔒 **PDF Export Locked:** Upgrade to **Mitra Lapangan ($29/mo)** or **Institutional Plan ($299/mo)** to download official PDF reports.")
