@@ -20,7 +20,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- SIMULASI DATABASE TERPUSAT (PERSISTENT STATE / CLOUD DB READY) ---
+# --- DATABASE TERPUSAT (PERSISTENT STATE / CLOUD DB READY) ---
 if 'db_licenses' not in st.session_state:
     st.session_state['db_licenses'] = {
         "ZF-FREE-DEMO": {"nama": "Pengguna Gratis / Free Trial", "tier": "FREE", "max_area": 100.0, "pdf_export": False, "map_access": False, "harga": "$0 / Free"},
@@ -222,7 +222,7 @@ total_opex_idr = total_opex_usd * usd_to_idr
 net_min_usd = val_min_usd - total_opex_usd
 net_max_usd = val_max_usd - total_opex_usd
 
-# SIMPAN KE DATABASE TERPUSAT (HISTORI Pemindaian)
+# SIMPAN KE DATABASE TERPUSAT
 scan_entry = {
     "location": nama_area,
     "coords": f"{lat:.6f}, {lon:.6f}",
@@ -264,24 +264,31 @@ with tab_map:
         st.info("🔒 **Map Feature Locked:** Upgrade to **Mitra Lapangan ($29/mo)** or **Institutional Plan ($299/mo)** to unlock interactive Google Satellite Maps.")
 
 with tab_3d_mesh:
-    st.subheader("📊 Interaktif 3D Volumetric Subsurface Profile (Plotly Mesh)")
+    st.subheader("Interaktif 3D Volumetric Subsurface Profile (Plotly Mesh)")
     
-    # Generate 3D Surface Data
-    x = np.linspace(-50, 50, 30)
-    y = np.linspace(-50, 50, 30)
+    # Generate Grid 3D Safe Data
+    x = np.linspace(-50, 50, 20)
+    y = np.linspace(-50, 50, 20)
     X, Y = np.meshgrid(x, y)
     
-    # Bedrock Contour (Paleochannel)
     Z_topsoil = -1 * np.ones_like(X)
     Z_aquifer = -5 * np.ones_like(X)
     Z_bedrock = -8 - 2 * np.sin(np.sqrt(X**2 + Y**2)/10)
     Z_paydirt = Z_bedrock - tebal_paydirt
 
     fig = go.Figure()
-    fig.add_trace(go.Surface(z=Z_topsoil, x=X, y=Y, colorscale='Greens', name='Topsoil Layer (0-3m)', showscale=False))
-    fig.add_trace(go.Surface(z=Z_aquifer, x=X, y=Y, colorscale='Blues', name='Aquifer Layer (4-7m)', showscale=False, opacity=0.6))
-    fig.add_trace(go.Surface(z=Z_bedrock, x=X, y=Y, colorscale='YlOrRd', name='Bedrock Blue Clay (8-9m)', showscale=False))
-    fig.add_trace(go.Surface(z=Z_paydirt, x=X, y=Y, colorscale='Gold', name='RICH GOLD ORE (PAYDIRT)', showscale=True))
+    
+    # Lapisan Topsoil
+    fig.add_trace(go.Surface(z=Z_topsoil, x=X, y=Y, colorscale='Viridis', showscale=False, name='Topsoil (0-3m)'))
+    
+    # Lapisan Akuifer / Air
+    fig.add_trace(go.Surface(z=Z_aquifer, x=X, y=Y, colorscale='Blues', showscale=False, opacity=0.5, name='Aquifer (4-7m)'))
+    
+    # Lapisan Bedrock Lempung
+    fig.add_trace(go.Surface(z=Z_bedrock, x=X, y=Y, colorscale='Cividis', showscale=False, name='Bedrock (8-9m)'))
+    
+    # Lapisan Emas Pekat (Paydirt)
+    fig.add_trace(go.Surface(z=Z_paydirt, x=X, y=Y, colorscale='Plasma', showscale=True, name='GOLD PAYDIRT'))
 
     fig.update_layout(
         title=f"3D Structural Layer & Paleochannel Trap Geometry ({nama_area})",
@@ -416,7 +423,7 @@ def generate_geojson(p_nama, p_lat, p_lon):
     }
     return json.dumps(geojson_data, indent=2)
 
-# --- TOMBOL UNDUH PDF & EXPORT FILE GIS (.KML / .GeoJSON) ---
+# --- TOMBOL UNDUH PDF & EXPORT FILE GIS ---
 col_exp1, col_exp2, col_exp3 = st.columns(3)
 
 with col_exp1:
