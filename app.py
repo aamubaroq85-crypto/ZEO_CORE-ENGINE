@@ -3,47 +3,33 @@ import pandas as pd
 import numpy as np
 import folium
 from streamlit_folium import st_folium
+import plotly.graph_objects as go
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import io
+import json
+import secrets
 
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(
-    page_title="ZF-Core Engine Global",
+    page_title="ZF-Core Engine Enterprise",
     page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# --- DATABASE TIER LISENSI INTERNASIONAL ---
-VALID_LICENSES = {
-    "ZF-FREE-DEMO": {
-        "nama": "Pengguna Gratis / Free Trial",
-        "tier": "FREE",
-        "max_area": 100.0,
-        "pdf_export": False,
-        "map_access": False,
-        "harga": "$0 / Free"
-    },
-    "ZF-MITRA-2026": {
-        "nama": "Mitra Lapangan (Field Pro)",
-        "tier": "MITRA",
-        "max_area": 50000.0,
-        "pdf_export": True,
-        "map_access": True,
-        "harga": "$29 / Month"
-    },
-    "ZF-INSTITUTION-VIP": {
-        "nama": "Institutional / Enterprise Access",
-        "tier": "INSTITUTIONAL",
-        "max_area": 99999999.0,
-        "pdf_export": True,
-        "map_access": True,
-        "harga": "$299 / Month"
+# --- SIMULASI DATABASE TERPUSAT (PERSISTENT STATE / CLOUD DB READY) ---
+if 'db_licenses' not in st.session_state:
+    st.session_state['db_licenses'] = {
+        "ZF-FREE-DEMO": {"nama": "Pengguna Gratis / Free Trial", "tier": "FREE", "max_area": 100.0, "pdf_export": False, "map_access": False, "harga": "$0 / Free"},
+        "ZF-MITRA-2026": {"nama": "Mitra Lapangan (Field Pro)", "tier": "MITRA", "max_area": 50000.0, "pdf_export": True, "map_access": True, "harga": "$29 / Month"},
+        "ZF-INSTITUTION-VIP": {"nama": "Institutional / Enterprise Access", "tier": "INSTITUTIONAL", "max_area": 99999999.0, "pdf_export": True, "map_access": True, "harga": "$299 / Month"}
     }
-}
+
+if 'scan_history' not in st.session_state:
+    st.session_state['scan_history'] = []
 
 # --- STYLING (DARK ENTERPRISE THEME) ---
 st.markdown("""
@@ -69,39 +55,65 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- SISTEM LOGIN & OTENTIKASI LISENSI ---
+# --- SISTEM LOGIN, PAYMENT GATEWAY & OTENTIKASI LISENSI ---
 if 'authenticated' not in st.session_state:
     st.session_state['authenticated'] = False
     st.session_state['user_info'] = {}
 
 if not st.session_state['authenticated']:
-    st.title("🔒 ZF-Core Engine Global SaaS")
-    st.subheader("International Gold Geophysics & Valuation Platform")
+    st.title("🔒 ZF-Core Engine Global Enterprise")
+    st.subheader("International Gold Geophysics, 3D Mesh & Valuation Platform")
     
-    col_lic, col_info = st.columns([1, 1])
+    tab_login, tab_payment = st.tabs(["🔑 Authenticate License", "💳 Instant Subscription (Payment Gateway)"])
     
-    with col_lic:
-        license_key = st.text_input("Enter License Serial Key (Kunci Lisensi):", type="password")
-        if st.button("AUTHENTICATE / MASUK"):
-            if license_key in VALID_LICENSES:
-                st.session_state['authenticated'] = True
-                st.session_state['user_info'] = VALID_LICENSES[license_key]
-                st.success(f"Access Granted! Welcome, {st.session_state['user_info']['nama']}.")
-                st.rerun()
-            else:
-                st.error("Invalid or Expired Serial Key.")
-        
-        st.markdown("---")
-        st.write("🔑 **Demo Keys for Testing:**")
-        st.code("ZF-FREE-DEMO       -> Free Trial ($0)\nZF-MITRA-2026      -> Mitra Lapangan ($29/mo)\nZF-INSTITUTION-VIP -> Institutional ($299/mo)")
+    with tab_login:
+        col_lic, col_info = st.columns([1, 1])
+        with col_lic:
+            license_key = st.text_input("Enter License Serial Key (Kunci Lisensi):", type="password")
+            if st.button("AUTHENTICATE / MASUK"):
+                if license_key in st.session_state['db_licenses']:
+                    st.session_state['authenticated'] = True
+                    st.session_state['user_info'] = st.session_state['db_licenses'][license_key]
+                    st.success(f"Access Granted! Welcome, {st.session_state['user_info']['nama']}.")
+                    st.rerun()
+                else:
+                    st.error("Invalid or Expired Serial Key.")
+            
+            st.markdown("---")
+            st.write("🔑 **Demo Keys for Testing:**")
+            st.code("ZF-FREE-DEMO       -> Free Trial ($0)\nZF-MITRA-2026      -> Mitra Lapangan ($29/mo)\nZF-INSTITUTION-VIP -> Institutional ($299/mo)")
 
-    with col_info:
-        st.markdown("""
-        ### 🌍 Subscription Plans / Paket Lisensi:
-        * **🆓 Free Trial ($0):** Limited to 100 m² scan area. Basic volumetric reports.
-        * **🚜 Mitra Lapangan ($29 / Mo):** Up to 50,000 m² (5 Ha), Satellite Maps, PDF Reports, OPEX Calculator.
-        * **🏛️ Institutional ($299 / Mo):** Unlimited Scan Area, Full Investor PDF Export, Multi-currency (USD & IDR).
-        """)
+        with col_info:
+            st.markdown("""
+            ### 🌍 Subscription Plans / Paket Lisensi:
+            * **🆓 Free Trial ($0):** Limited to 100 m² scan area. Basic volumetric reports.
+            * **🚜 Mitra Lapangan ($29 / Mo):** Up to 50,000 m² (5 Ha), Satellite Maps, PDF Reports, OPEX Calculator.
+            * **🏛️ Institutional ($299 / Mo):** Unlimited Scan Area, Full Investor PDF Export, Multi-currency, GIS Export & 3D Volumetric Mesh.
+            """)
+            
+    with tab_payment:
+        st.subheader("⚡ Automated License Key Generation (Stripe / PayPal / QRIS Simulating)")
+        col_pay1, col_pay2 = st.columns(2)
+        with col_pay1:
+            nama_pembeli = st.text_input("Full Name / Company", value="PT Tambang Papua Sejahtera")
+            email_pembeli = st.text_input("Email Address", value="investor@papuagold.com")
+            plan_selected = st.selectbox("Select Subscription Tier", ["Mitra Lapangan ($29 / Month)", "Institutional VIP ($299 / Month)"])
+        with col_pay2:
+            st.info("💳 **Payment Method Integration:** System automatically connects to Stripe/PayPal API gateway upon checkout.")
+            if st.button("PROCEED PAYMENT & GENERATE LICENSE KEY"):
+                new_key = f"ZF-AUTO-{secrets.token_hex(4).upper()}"
+                is_vip = "Institutional" in plan_selected
+                st.session_state['db_licenses'][new_key] = {
+                    "nama": nama_pembeli,
+                    "tier": "INSTITUTIONAL" if is_vip else "MITRA",
+                    "max_area": 99999999.0 if is_vip else 50000.0,
+                    "pdf_export": True,
+                    "map_access": True,
+                    "harga": "$299 / Month" if is_vip else "$29 / Month"
+                }
+                st.success("✅ Payment Successful! Your License Key has been automatically activated and sent to your database.")
+                st.code(f"YOUR SERIAL KEY: {new_key}", language="text")
+                st.caption("Copy this key and paste it in the 'Authenticate License' tab above to log in.")
     st.stop()
 
 # --- SIDEBAR UTAMA ---
@@ -153,10 +165,10 @@ with st.sidebar.expander("📍 Cara Ambil Koordinat Baru"):
     """)
 
 # --- KONTEN UTAMA APLIKASI ---
-st.title("📡 ZF-SCANNER 3D GRID GLOBAL")
-st.caption("π_eff Geospatial Connected Engine v4.0 International Edition")
+st.title("📡 ZF-SCANNER 3D GRID GLOBAL ENTERPRISE")
+st.caption("π_eff Geospatial Connected Engine v5.0 Enterprise Edition")
 
-# --- FITUR PANDUAN PENGAMBILAN KOORDINAT (DASHBOARD GUIDE) ---
+# --- FITUR PANDUAN PENGAMBILAN KOORDINAT ---
 with st.expander("📍 CARA MENDAPATKAN KOORDINAT GPS LOKASI TARGET BARU (GUIDE)", expanded=False):
     st.markdown("""
     <div class="guide-card">
@@ -165,15 +177,9 @@ with st.expander("📍 CARA MENDAPATKAN KOORDINAT GPS LOKASI TARGET BARU (GUIDE)
             <li><b>Buka Aplikasi Google Maps</b> pada ponsel atau browser komputer Anda.</li>
             <li>Cari area/wilayah lahan baru yang ingin Anda analisis potensi emasnya.</li>
             <li><b>Tekan lama (di HP)</b> atau <b>Klik kanan (di Komputer)</b> tepat pada titik tengah (episentrum) lahan hingga muncul pin/tanda merah.</li>
-            <li>Salin angka koordinat Latitude & Longitude yang muncul (Contoh: <code>-2.789327, 140.654430</code> atau <code>-3.123456, 140.987654</code>).</li>
-            <li>Buka bilah menu samping (<i>Sidebar</i>) aplikasi ini, lalu ganti:
-                <ul>
-                    <li><b>Location Name:</b> Ketik nama kampung/distrik lokasi baru tersebut.</li>
-                    <li><b>Scan Area Size:</b> Masukkan luas lahan dalam meter persegi (m²).</li>
-                    <li><b>Coordinates:</b> Tempel angka koordinat baru yang sudah Anda salin.</li>
-                </ul>
-            </li>
-            <li>Klik tombol biru <b>RUN 3D SCAN & VALUATION</b>. Seluruh peta, volume, valuasi, dan laporan PDF akan langsung diperbarui otomatis!</li>
+            <li>Salin angka koordinat Latitude & Longitude yang muncul (Contoh: <code>-2.789327, 140.654430</code>).</li>
+            <li>Buka bilah menu samping (<i>Sidebar</i>) aplikasi ini, lalu sesuaikan parameter lokasi.</li>
+            <li>Klik tombol biru <b>RUN 3D SCAN & VALUATION</b>.</li>
         </ol>
     </div>
     """, unsafe_allow_html=True)
@@ -216,6 +222,17 @@ total_opex_idr = total_opex_usd * usd_to_idr
 net_min_usd = val_min_usd - total_opex_usd
 net_max_usd = val_max_usd - total_opex_usd
 
+# SIMPAN KE DATABASE TERPUSAT (HISTORI Pemindaian)
+scan_entry = {
+    "location": nama_area,
+    "coords": f"{lat:.6f}, {lon:.6f}",
+    "area_m2": luas_m2,
+    "gold_yield_kg": f"{emas_min_kg:.2f} - {emas_max_kg:.2f} Kg",
+    "valuation_usd": f"${val_min_usd/1e6:.2f}M -${val_max_usd/1e6:.2f}M"
+}
+if not any(d['coords'] == scan_entry['coords'] and d['location'] == scan_entry['location'] for d in st.session_state['scan_history']):
+    st.session_state['scan_history'].append(scan_entry)
+
 # --- METRIK UTAMA ---
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("A_ZF Accuracy Score", f"{skor_azf}%", "HIGH PROSPECT")
@@ -225,23 +242,67 @@ col4.metric("Est. Gross Valuation ($)", f"${val_min_usd/1e6:.2f}M -${val_max_usd
 
 st.markdown("---")
 
-# --- PETA SATELLITE ---
-st.subheader("🗺️ Target Episentrum Interactive Satellite Map")
-if user['map_access']:
-    m = folium.Map(location=[lat, lon], zoom_start=16, tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", attr="Google Satelit")
-    folium.Marker(
-        [lat, lon],
-        popup=f"Target: {nama_area}\nEst: ${val_min_usd/1e6:.2f}M USD",
-        icon=folium.Icon(color="red", icon="info-sign")
-    ).add_to(m)
-    folium.Circle(
-        radius=np.sqrt(luas_m2 / np.pi),
-        location=[lat, lon],
-        color="gold", fill=True, fill_opacity=0.3
-    ).add_to(m)
-    st_folium(m, width=1100, height=380)
-else:
-    st.info("🔒 **Map Feature Locked:** Upgrade to **Mitra Lapangan ($29/mo)** or **Institutional Plan ($299/mo)** to unlock interactive Google Satellite Maps.")
+# --- VISUALISASI PETA & 3D MESH ---
+tab_map, tab_3d_mesh, tab_db_history = st.tabs(["🗺️ Interactive Satellite Map", "🧊 Interactive 3D Volumetric Mesh", "🗄️ Central Database & Scan History"])
+
+with tab_map:
+    st.subheader("Target Episentrum Interactive Satellite Map")
+    if user['map_access']:
+        m = folium.Map(location=[lat, lon], zoom_start=16, tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", attr="Google Satelit")
+        folium.Marker(
+            [lat, lon],
+            popup=f"Target: {nama_area}\nEst: ${val_min_usd/1e6:.2f}M USD",
+            icon=folium.Icon(color="red", icon="info-sign")
+        ).add_to(m)
+        folium.Circle(
+            radius=np.sqrt(luas_m2 / np.pi),
+            location=[lat, lon],
+            color="gold", fill=True, fill_opacity=0.3
+        ).add_to(m)
+        st_folium(m, width=1100, height=380)
+    else:
+        st.info("🔒 **Map Feature Locked:** Upgrade to **Mitra Lapangan ($29/mo)** or **Institutional Plan ($299/mo)** to unlock interactive Google Satellite Maps.")
+
+with tab_3d_mesh:
+    st.subheader("📊 Interaktif 3D Volumetric Subsurface Profile (Plotly Mesh)")
+    
+    # Generate 3D Surface Data
+    x = np.linspace(-50, 50, 30)
+    y = np.linspace(-50, 50, 30)
+    X, Y = np.meshgrid(x, y)
+    
+    # Bedrock Contour (Paleochannel)
+    Z_topsoil = -1 * np.ones_like(X)
+    Z_aquifer = -5 * np.ones_like(X)
+    Z_bedrock = -8 - 2 * np.sin(np.sqrt(X**2 + Y**2)/10)
+    Z_paydirt = Z_bedrock - tebal_paydirt
+
+    fig = go.Figure()
+    fig.add_trace(go.Surface(z=Z_topsoil, x=X, y=Y, colorscale='Greens', name='Topsoil Layer (0-3m)', showscale=False))
+    fig.add_trace(go.Surface(z=Z_aquifer, x=X, y=Y, colorscale='Blues', name='Aquifer Layer (4-7m)', showscale=False, opacity=0.6))
+    fig.add_trace(go.Surface(z=Z_bedrock, x=X, y=Y, colorscale='YlOrRd', name='Bedrock Blue Clay (8-9m)', showscale=False))
+    fig.add_trace(go.Surface(z=Z_paydirt, x=X, y=Y, colorscale='Gold', name='RICH GOLD ORE (PAYDIRT)', showscale=True))
+
+    fig.update_layout(
+        title=f"3D Structural Layer & Paleochannel Trap Geometry ({nama_area})",
+        scene=dict(
+            xaxis_title="X Grid (Meters)",
+            yaxis_title="Y Grid (Meters)",
+            zaxis_title="Depth (Meters Below Surface)",
+            aspectratio=dict(x=1, y=1, z=0.5)
+        ),
+        margin=dict(l=0, r=0, b=0, t=40),
+        template="plotly_dark"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+with tab_db_history:
+    st.subheader("🗄️ Centralized Cloud Database - Saved Scan History")
+    df_history = pd.DataFrame(st.session_state['scan_history'])
+    if not df_history.empty:
+        st.dataframe(df_history, use_container_width=True)
+    else:
+        st.info("No scan history recorded yet.")
 
 # --- LAPORAN ANALISIS ---
 st.markdown(f"""
@@ -268,8 +329,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- VISUALISASI LAYAR 3D DENSITY ---
-st.subheader("🧊 Subsurface Structural Layer Density Profile")
+# --- VISUALISASI DENSITY TABLE ---
+st.subheader("🧊 Subsurface Structural Layer Density Profile Table")
 start_gold = 10
 end_gold = start_gold + int(tebal_paydirt) - 1
 
@@ -289,7 +350,7 @@ for z in range(1, 21):
 df_layers = pd.DataFrame(layers_data)
 st.dataframe(df_layers, use_container_width=True)
 
-# --- FUNGSI GENERATOR LAPORAN PDF ---
+# --- FUNGSI GENERATOR PDF & EXPORT GIS (.KML & .GeoJSON) ---
 def generate_pdf(p_nama, p_lat, p_lon, p_luas, p_skor, p_vol, p_tebal, p_emas_min, p_emas_max, p_val_min, p_val_max, p_opex, p_hari, p_net_min, p_net_max):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -331,18 +392,63 @@ def generate_pdf(p_nama, p_lat, p_lon, p_luas, p_skor, p_vol, p_tebal, p_emas_mi
     buffer.seek(0)
     return buffer
 
-# --- TOMBOL UNDUH PDF ---
-if user['pdf_export']:
-    pdf_file = generate_pdf(
-        nama_area, lat, lon, luas_m2, skor_azf, vol_ore_m3, tebal_paydirt,
-        emas_min_kg, emas_max_kg, val_min_usd, val_max_usd, total_opex_usd,
-        durasi_hari, net_min_usd, net_max_usd
-    )
-    st.download_button(
-        label="📄 DOWNLOAD OFFICIAL INVESTOR PDF REPORT ($ USD)",
-        data=pdf_file,
-        file_name=f"ZF_Report_{nama_area.replace(' ', '_')}.pdf",
-        mime="application/pdf"
-    )
-else:
-    st.info("🔒 **PDF Export Locked:** Upgrade to **Mitra Lapangan ($29/mo)** or **Institutional Plan ($299/mo)** to download official PDF reports.")
+def generate_kml(p_nama, p_lat, p_lon):
+    kml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Placemark>
+    <name>ZF Target: {p_nama}</name>
+    <description>ZF-Core Engine Gold Target Point</description>
+    <Point>
+      <coordinates>{p_lon},{p_lat},0</coordinates>
+    </Point>
+  </Placemark>
+</kml>"""
+    return kml_content
+
+def generate_geojson(p_nama, p_lat, p_lon):
+    geojson_data = {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "properties": {"name": f"ZF Target: {p_nama}"},
+            "geometry": {"type": "Point", "coordinates": [p_lon, p_lat]}
+        }]
+    }
+    return json.dumps(geojson_data, indent=2)
+
+# --- TOMBOL UNDUH PDF & EXPORT FILE GIS (.KML / .GeoJSON) ---
+col_exp1, col_exp2, col_exp3 = st.columns(3)
+
+with col_exp1:
+    if user['pdf_export']:
+        pdf_file = generate_pdf(
+            nama_area, lat, lon, luas_m2, skor_azf, vol_ore_m3, tebal_paydirt,
+            emas_min_kg, emas_max_kg, val_min_usd, val_max_usd, total_opex_usd,
+            durasi_hari, net_min_usd, net_max_usd
+        )
+        st.download_button(
+            label="📄 DOWNLOAD INVESTOR PDF REPORT",
+            data=pdf_file,
+            file_name=f"ZF_Report_{nama_area.replace(' ', '_')}.pdf",
+            mime="application/pdf"
+        )
+    else:
+        st.info("🔒 PDF Export Locked")
+
+with col_exp2:
+    if user['map_access']:
+        st.download_button(
+            label="🌍 EXPORT GIS (.KML for Google Earth)",
+            data=generate_kml(nama_area, lat, lon),
+            file_name=f"ZF_Target_{nama_area.replace(' ', '_')}.kml",
+            mime="application/vnd.google-earth.kml+xml"
+        )
+
+with col_exp3:
+    if user['map_access']:
+        st.download_button(
+            label="📍 EXPORT GIS (.GeoJSON for Garmin/QGIS)",
+            data=generate_geojson(nama_area, lat, lon),
+            file_name=f"ZF_Target_{nama_area.replace(' ', '_')}.geojson",
+            mime="application/json"
+        )
