@@ -62,6 +62,10 @@ st.markdown("""
         background-color: #1e293b; color: #00e5ff; padding: 5px 10px;
         border-radius: 5px; font-weight: bold; font-size: 12px;
     }
+    .guide-card {
+        background-color: #0f1d36; padding: 15px; border-radius: 8px;
+        border-left: 4px solid #00e5ff; margin-bottom: 15px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -139,9 +143,40 @@ with st.sidebar.form("input_form"):
     
     btn_scan = st.form_submit_button("RUN 3D SCAN & VALUATION")
 
+# Panduan Pintas di Sidebar
+with st.sidebar.expander("📍 Cara Ambil Koordinat Baru"):
+    st.markdown("""
+    1. Buka **Google Maps** di HP/Laptop.
+    2. Tekan/Klik titik lokasi target hingga muncul pin merah.
+    3. Salin angka koordinat (contoh: `-2.789327, 140.654430`).
+    4. Tempel ke kolom **Coordinates** di atas.
+    """)
+
 # --- KONTEN UTAMA APLIKASI ---
 st.title("📡 ZF-SCANNER 3D GRID GLOBAL")
 st.caption("π_eff Geospatial Connected Engine v4.0 International Edition")
+
+# --- FITUR PANDUAN PENGAMBILAN KOORDINAT (DASHBOARD GUIDE) ---
+with st.expander("📍 CARA MENDAPATKAN KOORDINAT GPS LOKASI TARGET BARU (GUIDE)", expanded=False):
+    st.markdown("""
+    <div class="guide-card">
+        <h4>🗺️ Panduan Langkah Pemindaian Lokasi Baru via Google Maps:</h4>
+        <ol>
+            <li><b>Buka Aplikasi Google Maps</b> pada ponsel atau browser komputer Anda.</li>
+            <li>Cari area/wilayah lahan baru yang ingin Anda analisis potensi emasnya.</li>
+            <li><b>Tekan lama (di HP)</b> atau <b>Klik kanan (di Komputer)</b> tepat pada titik tengah (episentrum) lahan hingga muncul pin/tanda merah.</li>
+            <li>Salin angka koordinat Latitude & Longitude yang muncul (Contoh: <code>-2.789327, 140.654430</code> atau <code>-3.123456, 140.987654</code>).</li>
+            <li>Buka bilah menu samping (<i>Sidebar</i>) aplikasi ini, lalu ganti:
+                <ul>
+                    <li><b>Location Name:</b> Ketik nama kampung/distrik lokasi baru tersebut.</li>
+                    <li><b>Scan Area Size:</b> Masukkan luas lahan dalam meter persegi (m²).</li>
+                    <li><b>Coordinates:</b> Tempel angka koordinat baru yang sudah Anda salin.</li>
+                </ul>
+            </li>
+            <li>Klik tombol biru <b>RUN 3D SCAN & VALUATION</b>. Seluruh peta, volume, valuasi, dan laporan PDF akan langsung diperbarui otomatis!</li>
+        </ol>
+    </div>
+    """, unsafe_allow_html=True)
 
 if luas_m2 > max_area_allowed:
     st.warning(f"🔒 **LIMITATION NOTICE:** You are attempting to scan {luas_m2:,.0f} m², but your **{user['tier']}** license is limited to **{max_area_allowed:,.0f} m²**. Please upgrade to **Institutional License ($299/mo)** for unlimited access.")
@@ -254,7 +289,7 @@ for z in range(1, 21):
 df_layers = pd.DataFrame(layers_data)
 st.dataframe(df_layers, use_container_width=True)
 
-# --- FUNGSI GENERATOR LAPORAN PDF (TERPERBAIKI) ---
+# --- FUNGSI GENERATOR LAPORAN PDF ---
 def generate_pdf(p_nama, p_lat, p_lon, p_luas, p_skor, p_vol, p_tebal, p_emas_min, p_emas_max, p_val_min, p_val_max, p_opex, p_hari, p_net_min, p_net_max):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
