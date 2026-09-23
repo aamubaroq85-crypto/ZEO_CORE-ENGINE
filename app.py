@@ -6,6 +6,7 @@ from streamlit_folium import st_folium
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import io
 
 # --- KONFIGURASI HALAMAN ---
@@ -116,7 +117,6 @@ with st.sidebar.form("input_form"):
     st.subheader("⚙️ Target Land Parameters")
     nama_area = st.text_input("Location Name", value="UPT Arso IX / Intaimilyan")
     
-    # Restriksi Luas Berdasarkan Tier
     max_area_allowed = user['max_area']
     luas_m2 = st.number_input(
         f"Scan Area (m²) [Max: {max_area_allowed:,.0f} m²]", 
@@ -124,21 +124,15 @@ with st.sidebar.form("input_form"):
         step=500.0
     )
     
-    if luas_m2 > max_area_allowed:
-        st.error(f"⚠️ License limit exceeded! Your current plan allows max {max_area_allowed:,.0f} m².")
-    
     coords_input = st.text_input("Coordinates (Lat, Long)", value="-2.789327, 140.654430")
     
-    # Currency Rates
     st.subheader("💵 Financial Acuations (USD & IDR)")
     usd_to_idr = st.number_input("USD Exchange Rate (Rp / $1)", value=15500, step=100)
     harga_per_oz_usd = st.number_input("Gold Price ($ / Ounce)", value=2500.0, step=50.0)
     
-    # Conversi Gram ke USD & IDR
     harga_per_gram_usd = harga_per_oz_usd / 31.1035
     harga_per_gram_idr = harga_per_gram_usd * usd_to_idr
     
-    # OPEX Simulation (Hanya untuk Mitra & Institutional)
     st.subheader("🚜 OPEX Simulation ($ USD)")
     durasi_hari = st.number_input("Duration (Days)", value=30, step=5)
     opex_per_day_usd = st.number_input("Daily Equipment & Fuel Cost ($/Day)", value=350.0, step=50.0)
@@ -149,7 +143,6 @@ with st.sidebar.form("input_form"):
 st.title("📡 ZF-SCANNER 3D GRID GLOBAL")
 st.caption("π_eff Geospatial Connected Engine v4.0 International Edition")
 
-# --- VALIDASI BATAS LUAS AREA LISENSI ---
 if luas_m2 > max_area_allowed:
     st.warning(f"🔒 **LIMITATION NOTICE:** You are attempting to scan {luas_m2:,.0f} m², but your **{user['tier']}** license is limited to **{max_area_allowed:,.0f} m²**. Please upgrade to **Institutional License ($299/mo)** for unlimited access.")
     st.stop()
@@ -176,7 +169,6 @@ tonase_tanah = vol_ore_m3 * 2.0
 emas_min_kg = (tonase_tanah * kadar_min) / 1000.0
 emas_max_kg = (tonase_tanah * kadar_max) / 1000.0
 
-# Valuasi USD & IDR
 val_min_usd = emas_min_kg * 1000 * harga_per_gram_usd
 val_max_usd = emas_max_kg * 1000 * harga_per_gram_usd
 
@@ -189,7 +181,7 @@ total_opex_idr = total_opex_usd * usd_to_idr
 net_min_usd = val_min_usd - total_opex_usd
 net_max_usd = val_max_usd - total_opex_usd
 
-# --- METRIK UTAMA DENGAN DUA MATA UANG ---
+# --- METRIK UTAMA ---
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("A_ZF Accuracy Score", f"{skor_azf}%", "HIGH PROSPECT")
 col2.metric("Ore Material Volume", f"{vol_ore_m3:,.0f} m³", f"Thickness ~{tebal_paydirt}m")
@@ -198,7 +190,7 @@ col4.metric("Est. Gross Valuation ($)", f"${val_min_usd/1e6:.2f}M -${val_max_usd
 
 st.markdown("---")
 
-# --- PETA SATELLITE (KHUSUS MITRA & INSTITUTIONAL) ---
+# --- PETA SATELLITE ---
 st.subheader("🗺️ Target Episentrum Interactive Satellite Map")
 if user['map_access']:
     m = folium.Map(location=[lat, lon], zoom_start=16, tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", attr="Google Satelit")
@@ -216,7 +208,7 @@ if user['map_access']:
 else:
     st.info("🔒 **Map Feature Locked:** Upgrade to **Mitra Lapangan ($29/mo)** or **Institutional Plan ($299/mo)** to unlock interactive Google Satellite Maps.")
 
-# --- LAPORAN ANALISIS GEOLOGI & KEUANGAN INTERNASIONAL ---
+# --- LAPORAN ANALISIS ---
 st.markdown(f"""
 <div class="report-card">
     <h3>📍 COMPREHENSIVE RESERVE & VALUATION REPORT</h3>
@@ -262,8 +254,8 @@ for z in range(1, 21):
 df_layers = pd.DataFrame(layers_data)
 st.dataframe(df_layers, use_container_width=True)
 
-# --- FUNGSI GENERATOR LAPORAN PDF (KHUSUS UNTUK MITRA & INSTITUTIONAL) ---
-def generate_pdf():
+# --- FUNGSI GENERATOR LAPORAN PDF (TERPERBAIKI) ---
+def generate_pdf(p_nama, p_lat, p_lon, p_luas, p_skor, p_vol, p_tebal, p_emas_min, p_emas_max, p_val_min, p_val_max, p_opex, p_hari, p_net_min, p_net_max):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
@@ -274,15 +266,15 @@ def generate_pdf():
     story.append(Spacer(1, 15))
 
     data_summary = [
-        ["Target Location", nama_area],
-        ["Coordinates", f"{lat:.6f}, {lon:.6f}"],
-        ["Scan Area Size", f"{luas_m2:,.0f} m² ({luas_m2/10000:.2f} Ha)"],
-        ["A_ZF Score", f"{skor_azf}% (HIGH PROSPECT)"],
-        ["Ore Material Volume", f"{vol_ore_m3:,.1f} m³ (Thickness ~{tebal_paydirt}m)"],
-        ["Est. Pure Gold Yield", f"{emas_min_kg:.2f} Kg - {emas_max_kg:.2f} Kg"],
-        ["Gross Valuation ($ USD)", f"${val_min_usd:,.2f} -${val_max_usd:,.2f}"],
-        ["Total OPEX Est. ($ USD)", f"${total_opex_usd:,.2f} ({durasi_hari} Days)"],
-        ["Net Profit Est. ($ USD)", f"${net_min_usd:,.2f} -${net_max_usd:,.2f}"]
+        ["Target Location", str(p_nama)],
+        ["Coordinates", f"{p_lat:.6f}, {p_lon:.6f}"],
+        ["Scan Area Size", f"{p_luas:,.0f} m² ({p_luas/10000:.2f} Ha)"],
+        ["A_ZF Score", f"{p_skor}% (HIGH PROSPECT)"],
+        ["Ore Material Volume", f"{p_vol:,.1f} m³ (Thickness ~{p_tebal}m)"],
+        ["Est. Pure Gold Yield", f"{p_emas_min:.2f} Kg - {p_emas_max:.2f} Kg"],
+        ["Gross Valuation ($ USD)", f"${p_val_min:,.2f} -${p_val_max:,.2f}"],
+        ["Total OPEX Est. ($ USD)", f"${p_opex:,.2f} ({p_hari} Days)"],
+        ["Net Profit Est. ($ USD)", f"${p_net_min:,.2f} -${p_net_max:,.2f}"]
     ]
 
     t = Table(data_summary, colWidths=[180, 300])
@@ -306,9 +298,14 @@ def generate_pdf():
 
 # --- TOMBOL UNDUH PDF ---
 if user['pdf_export']:
+    pdf_file = generate_pdf(
+        nama_area, lat, lon, luas_m2, skor_azf, vol_ore_m3, tebal_paydirt,
+        emas_min_kg, emas_max_kg, val_min_usd, val_max_usd, total_opex_usd,
+        durasi_hari, net_min_usd, net_max_usd
+    )
     st.download_button(
         label="📄 DOWNLOAD OFFICIAL INVESTOR PDF REPORT ($ USD)",
-        data=generate_pdf(),
+        data=pdf_file,
         file_name=f"ZF_Report_{nama_area.replace(' ', '_')}.pdf",
         mime="application/pdf"
     )
